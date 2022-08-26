@@ -1,0 +1,5 @@
+jobs: 
+- template: templates/cpu.yml
+  parameters:
+    AgentPool : 'Win-CPU-2019'
+    DoEsrp: 'false'

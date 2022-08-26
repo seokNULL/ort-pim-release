@@ -1,0 +1,71 @@
+parameters:
+  AgentPool : 'Linux-CPU'
+  JobName : 'Linux_CI_Dev'
+  SubmoduleCheckoutMode: ''
+  RunDockerBuildArgs: '-o ubuntu16.04 -d cpu -r $(Build.BinariesDirectory) -x "--use_mklml --use_tvm --build_wheel"'
+  DoNodejsPack: 'false'
+  DoNugetPack: 'false'
+  NuPackScript: ''
+  ArtifactName: 'drop-linux'
+  TimeoutInMinutes: 120
+  # Controls whether unreleased onnx opsets are allowed. Default is set to 1
+  AllowReleasedOpsetOnly: '1' 
+  # to inject strategy, you need to pass in the whole yaml structure - 
+  # https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema?view=azure-devops&tabs=schema#strategies
+  # see example in orttraining-linux-gpu-ci-pipeline.yml
+  Strategy: ''
+
+jobs:
+- job: ${{ parameters.JobName }}
+  workspace:
+    clean: all
+  timeoutInMinutes:  ${{ parameters.TimeoutInMinutes }}
+  variables:
+    ALLOW_RELEASED_ONNX_OPSET_ONLY: ${{ parameters.AllowReleasedOpsetOnly }}
+  pool: ${{ parameters.AgentPool }}
+  ${{ if ne(parameters.Strategy, '') }}:
+    strategy:
+      ${{ parameters.Strategy }}
+  steps:
+    - checkout: self
+      ${{ if ne(parameters.SubmoduleCheckoutMode, '') }}:
+        submodules: ${{ parameters.SubmoduleCheckoutMode }}
+    - template: linux-set-variables-and-download.yml
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '12.16.3'
+    - template: run-docker-build-steps.yml
+      parameters:
+        RunDockerBuildArgs: '${{ parameters.RunDockerBuildArgs }}'
+    - task: PublishTestResults@2
+      displayName: 'Publish unit test results'
+      inputs:
+        testResultsFiles: '**/*.results.xml'
+        searchFolder: '$(Build.BinariesDirectory)'
+        testRunTitle: 'Unit Test Run'
+      condition: succeededOrFailed()
+    - ${{ if eq(parameters['DoNugetPack'], 'true') }}:
+      - script: |
+         ${{ parameters.NuPackScript }}
+        displayName: 'Create Artifacts'
+      - task: PublishPipelineArtifact@0
+        displayName: 'Publish Pipeline Artifact'
+        inputs:
+          artifactName: ${{ parameters.ArtifactName }}
+          targetPath: '$(Build.ArtifactStagingDirectory)'
+    - ${{ if eq(parameters['DoNodejsPack'], 'true') }}:
+      - script: |
+         npm pack
+         cp $(Build.SourcesDirectory)/nodejs/onnxruntime-*.tgz $(Build.ArtifactStagingDirectory)
+         cp -R $(Build.SourcesDirectory)/nodejs/prebuilds $(Build.ArtifactStagingDirectory)/prebuilds
+        workingDirectory: '$(Build.SourcesDirectory)/nodejs'
+        displayName: 'Create NPM Package'
+      - task: PublishPipelineArtifact@0
+        displayName: 'Publish Pipeline Artifact: ${{ parameters.ArtifactName }}'
+        inputs:
+          artifactName: ${{ parameters.ArtifactName }}
+          targetPath: '$(Build.ArtifactStagingDirectory)'
+    - template: component-governance-component-detection-steps.yml
+      parameters :
+        condition : 'succeeded'
+    - template: clean-agent-build-directory-step.yml

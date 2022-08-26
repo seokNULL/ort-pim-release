@@ -1,0 +1,48 @@
+diff --git a/src/arithmetic/Simplify.cpp b/src/arithmetic/Simplify.cpp
+index 7174974..d23e988 100644
+--- a/src/arithmetic/Simplify.cpp
++++ b/src/arithmetic/Simplify.cpp
+@@ -555,6 +555,16 @@ private:
+ 
+         Expr a = mutate(op->a);
+         Expr b = mutate(op->b);
++
++        if (op->type.is_float()) {
++            if (a.same_as(op->a) && b.same_as(op->b)) {
++                expr = self;
++            } else {
++                expr = Add::make(a, b);
++            }
++            return;
++        }
++
+         if (propagate_indeterminate_expression(a, b, op->type, &expr)) {
+             return;
+         }
+@@ -927,6 +937,26 @@ private:
+         } else {
+             expr = Add::make(a, b);
+         }
++        // The following simplify pass is a copy corresponding to part of LLVM InstCombineAddSub pass,
++        // which assume no constant vector applied.
++        // We apply this pass here so LLVM pass won't be active.
++        // This is a walk-around fix for now.
++        // The real proper fix should change the tvm simplify and vectorize passes register order.
++        if (no_overflow(op->type) && (mod_a && mul_b)) {
++          const Mod* mod_b_a = mul_b->a.as<Mod>();
++          const Div* div_b_a_a = mod_b_a ? mod_b_a->a.as<Div>() : nullptr;
++          if (mod_b_a && div_b_a_a && equal(mod_a->b, mul_b->b) && equal(mod_a->b, div_b_a_a->b) && equal(mod_a->a, div_b_a_a->a)) {
++            // x%2 + ((x/2)%4)*2 -> x%(2*4)
++            expr = Mod::make(mod_a->a, mod_a->b * mod_b_a->b);
++          }
++        } else if (no_overflow(op->type) && (mul_a && mod_b)) {
++          const Mod* mod_a_a = mul_a->a.as<Mod>();
++          const Div* div_a_a_a = mod_a_a ? mod_a_a->a.as<Div>() : nullptr;
++          if (mod_a_a && div_a_a_a && equal(mod_b->b, mul_a->b) && equal(mod_b->b, div_a_a_a->b) && equal(mod_b->a, div_a_a_a->a)) {
++            // ((x/2)%4)*2 + x%2 -> x%(2*4)
++            expr = Mod::make(mod_b->a, mod_b->b * mod_a_a->b);
++          }
++        }
+     }
+ 
+     void visit(const Sub *op, const Expr &self) {
