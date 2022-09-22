@@ -1,6 +1,7 @@
 # build, distribute, and bins (+ python proto bindings)
 log_*
 x86_build
+build_arm
 x86_release_build
 arm_build
 arm_release_build
@@ -8,6 +9,7 @@ arm_debug_build
 arm_paper_build
 build_debug_x86_0614
 build_x86_debug
+build
 build*
 build_host_protoc
 build_android
@@ -24,6 +26,8 @@ cmake_build
 cmake-build-debug
 micro_bench/**/*.json
 gen
+*.git.bak
+*.bak
 *~
 .vs
 .DS_Store
