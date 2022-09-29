@@ -1,7 +1,5 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the Korea Univ, COMMIT Lab License.
-
-#include "core/providers/pim/math/lut_ops.h"
 #include "core/framework/data_types_internal.h"
 #include "core/util/math.h"
 #include "core/providers/cpu/tensor/utils.h"
@@ -10,7 +8,8 @@
 
 #include <cmath>
 #include "lut_helper.h"
-
+#include "core/providers/pim/math/lut_ops.h"
+#include "core/providers/pim/pim_execution_provider.h"
 
 namespace onnxruntime {
 namespace pim {
@@ -107,7 +106,7 @@ REG_ELEMENTWISE_TYPED_KERNEL(Abs, 13, float, Abs);
 
 //Pow functions need to be checked for opset version error!! 
 //Now we temporally enlarged kernel start&end version to 7~13. 
-//Any exception case with lower opset version can be happened
+//Any exception case with lower opset version can be happened.
 REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Pow, 7, 13, float, Pow);
 // REG_ELEMENTWISE_TYPED_KERNEL(Pow, 12, float, Pow);
 // REG_ELEMENTWISE_VERSIONED_KERNEL_NONT(Pow, 7, 11, Pow, float);
@@ -126,28 +125,22 @@ REG_ELEMENTWISE_TYPED_KERNEL(Sigmoid, 13, float, Sigmoid);
 
 template <typename T>
 Status Erf<T>::Compute(OpKernelContext* ctx) const {
+  
+  // auto  p_op_kernel = *ctx.kernel_;
+  // const OpKernelInfo& op_kernel_info = p_op_kernel->Info();
+  // auto  PimProvider                  = op_kernel_info.GetExecutionProvider();
+  
+  const auto* X = ctx->Input<Tensor>(0);
+  const auto& x_shape = X->Shape();
+  auto* Y = ctx->Output(0, x_shape);
+  
+// const size_t N = static_cast<size_t>(x_shape.Size());
+  const Bfloat16* x_pim_ptr = X->Data<Bfloat16>();
+  // Bfloat16* fx_pim_ptr = erf_lut;
+  Bfloat16* fx_pim_ptr;
+  Bfloat16* y_pim_ptr = Y->MutableData<Bfloat16>();
 
-  const auto* A = ctx->Input<Tensor>(0);
-  const auto* B = ctx->Input<Tensor>(1);
-  const auto* C = ctx->Input<Tensor>(2);
-
-  // Bias could be missing. Treat as scalar 0 if that is the case.
-  LutHelper helper(A->Shape(), B->Shape(), "Erf");
-
-  if (!helper.State().IsOK())
-    return helper.State();
-
-  int64_t M = helper.M();
-  int64_t N = helper.N();
-  int64_t K = 0;
-
-  auto Y = ctx->Output(0, {M, N});
-  // if input is empty tensor, return as nothing need to be calculated and we've set the shape for the output
-  if (M == 0 || N == 0)
-    return Status::OK();
-  T* y_data = Y->MutableData<T>();
-  ComputeLut(M, N, K);
-
+  ComputeLut(x_pim_ptr, fx_pim_ptr, y_pim_ptr);
 
 return Status::OK();
 }
@@ -191,7 +184,27 @@ return Status::OK();
 
 template <typename T>
 Status Sqrt<T>::Compute(OpKernelContext* ctx) const {
+  // const OpKernel*     p_op_kernel = ctx->kernel_;
+  // const OpKernelInfo& op_kernel_info = p_op_kernel->Info();
+  // auto  PimProvider                  = op_kernel_info.GetExecutionProvider();
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
 
+  const auto* X = ctx->Input<Tensor>(0);
+  const auto& x_shape = X->Shape();
+  auto* Y = ctx->Output(0, x_shape);
+  
+// const size_t N = static_cast<size_t>(x_shape.Size());
+  const Bfloat16* x_pim_ptr = X->Data<Bfloat16>();
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(6);
+
+  // Bfloat16* fx_pim_ptr;
+  //  for(size_t i=0; i<65536; i++){
+  //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
+  //   }
+  
+  Bfloat16* y_pim_ptr = Y->MutableData<Bfloat16>();
+
+  ComputeLut(x_pim_ptr, fx_pim_ptr, y_pim_ptr);
 
 return Status::OK();
 }
@@ -218,7 +231,12 @@ return Status::OK();
 }
 
 
-void ComputeLut(int64_t M, int64_t N, int64_t fileptr) {
+void ComputeLut(const Bfloat16* x_ptr, Bfloat16* f_ptr, Bfloat16* fx_ptr) {
+  
+  // int pl_dma_fd = pim_args->GetFileDescriptor();
+  // ioctl_info* set_info = pim_args->GetSetInfo();
+  
+
   return;
 }
 

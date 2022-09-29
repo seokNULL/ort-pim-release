@@ -23,9 +23,9 @@
 #include <fstream>
 #include <string>
 #include "core/providers/pim/math/lut_ops.h"
-
 #include "core/providers/pim/math/lut_helper.h"
 
+#include "core/providers/pim/helper/pim_init.h"
 
 using namespace onnxruntime::common;
 
@@ -37,18 +37,6 @@ struct KernelRegistryAndStatus {
   Status st;
 };
 }  // namespace
-
-namespace {
-struct LookUpTableChecker {
-  std::shared_ptr<onnxruntime::KernelRegistry> kernel_registry = std::make_shared<onnxruntime::KernelRegistry>();
-  Status st;
-  int check_registry_start_idx = 14; //Must be checked
-  int check_registry_end_idx = 18;   //Must be checked
-  std::string lut_table_path;
-
-};
-}  // namespace
-
 namespace onnxruntime {
 
 PIMExecutionProvider::PIMExecutionProvider(const PIMExecutionProviderInfo& info)
@@ -76,10 +64,8 @@ PIMExecutionProvider::PIMExecutionProvider(const PIMExecutionProviderInfo& info)
       CPU_ALLOCATOR_DEVICE_ID);
 
   InsertAllocator(CreateAllocator(cpu_memory_info));
-
-  // SetFileDescriptor();
   SetPimDevice();
-
+  RegisterLut();
 }
 
 PIMExecutionProvider::~PIMExecutionProvider() {
@@ -143,8 +129,8 @@ PIMExecutionProvider::GetCapability(const onnxruntime::GraphViewer& graph, const
       // std::vector<std::pair<int,int>> mul_vec = {};
       std::vector<std::pair<int,int>> mul_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
 
-      // std::vector<std::pair<int,int>> sub_vec = {};
-      std::vector<std::pair<int,int>> sub_vec = {{3,3}};
+       std::vector<std::pair<int,int>> sub_vec = {};
+      //std::vector<std::pair<int,int>> sub_vec = {{3,3}};
       // std::vector<std::pair<int,int>> sub_vec = {{3,1}, {1,3}, {3,0}};
       // std::vector<std::pair<int,int>> sub_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
       // std::vector<std::pair<int,int>> sub_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
@@ -313,11 +299,11 @@ class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 
 class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 6, 12, float, Sqrt);
 class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Sqrt);
 
-class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 12, float, Div);
-class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Div);
+// class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 12, float, Div);
+// class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Div);
 
-class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 13, float, Pow);
-// class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 12, float, Pow);
+// class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 13, float, Pow);
+// // class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 12, float, Pow);
 
 // class ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 11, Pow);
 // class ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 12, 12, Pow);
@@ -357,7 +343,6 @@ KernelCreateInfo BuildKernelCreateInfo<void>() {
 
 static Status ModifyLutPimKernels(KernelRegistry& kernel_registry) {
   // Need to be implemented with dynamic LUT generator compilation. --> Future works
-  LookUpTableChecker ret;
   static const BuildKernelCreateInfoFn function_table[] = {};
 
   for (auto& function_table_entry : function_table) {
@@ -401,11 +386,8 @@ static Status RegisterPimKernels(KernelRegistry& kernel_registry) {
       BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Sqrt)>,
       
 
-      BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 13, float, Pow)>,
-      // BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 12, float, Pow)>,
-      // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 11, Pow)>,
-      // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 12, 12, Pow)>,
-      // BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, Pow)>,
+      // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 13, float, Pow)>,
+      
 
 
       BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 6, 12, float, Relu)>,
@@ -423,8 +405,8 @@ static Status RegisterPimKernels(KernelRegistry& kernel_registry) {
       BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 6, 12, float, Log)>,
       BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Log)>,
 
-      BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 12, float, Div)>,
-      BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Div)>,
+      // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 12, float, Div)>,
+      // BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Div)>,
 
 
       // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 6, 12, float, Sigmoid)>,
@@ -442,6 +424,7 @@ static Status RegisterPimKernels(KernelRegistry& kernel_registry) {
       ORT_RETURN_IF_ERROR(kernel_registry.Register(std::move(info)));
     }
   }
+
   return Status::OK();
 }
 
@@ -449,6 +432,7 @@ KernelRegistryAndStatus GetPimKernelRegistry() {
   KernelRegistryAndStatus ret;
   ret.st = RegisterPimKernels(*ret.kernel_registry);
   // ret.st = ModifyLutPimKernels(*ret.kernel_registry);
+
   return ret;
 }
 
@@ -457,22 +441,45 @@ KernelRegistryAndStatus GetPimKernelRegistry() {
 
 } // namespace pim
 
+
+
 std::shared_ptr<KernelRegistry>
 PIMExecutionProvider::GetKernelRegistry() const {
   static KernelRegistryAndStatus k = onnxruntime::pim::GetPimKernelRegistry();
-  Path lut_base_dir;
-  lut_base_dir = Path::Parse(ToPathString(Env::Default().GetEnvironmentVar(lut_env_vars::kLutPath)));  
-  if (lut_base_dir.IsEmpty()) {
-    ORT_NOT_IMPLEMENTED("[PIM Execution Provider] ORT_PIM_LUT_PATH isn't configured! Please use ORT_PIM_LUT_PATH to specify pre-existed lut data path");
-  }
+
+  //LUT table create & initialize in PIM memory
+  // RegisterLut();
+  
   // throw if the registry failed to initialize
   ORT_THROW_IF_ERROR(k.st);
+  
   return k.kernel_registry;
+}
+
+Status PIMExecutionProvider::RegisterLut() {
+    // std::vector<std::string> lut_tables = {"Abs","Div","Erf","Log","Neg","Pow","Relu","Sigmoid","Sqrt","Tanh"};
+    std::vector<std::string> lut_tables = {"Abs","Erf","Log","Neg","Relu","Sigmoid","Sqrt","Tanh"};
+    //                                        0,     1,     2,    3,    4,       5,      6,      7
+    
+    //Need to be fixed as iterative
+    //for(auto it...)
+    Status st;
+    LutHelper helper("Sqrt");
+    sqrt_lut = helper.lut_ptr();
+    st = helper.State();
+    
+    return st;
+}
+
+Bfloat16* PIMExecutionProvider::ReturnLut(int num_id) const {
+    //Need to be fiex with num_id fucntional
+    return sqrt_lut;
 }
 
 std::unique_ptr<onnxruntime::IDataTransfer> PIMExecutionProvider::GetDataTransfer() const {
   return onnxruntime::make_unique<onnxruntime::PIMDataTransfer>();
 }
+
 
 
 

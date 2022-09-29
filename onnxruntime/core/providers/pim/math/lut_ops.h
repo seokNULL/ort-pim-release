@@ -130,7 +130,7 @@ class Pow final : public OpKernel {
   // template <typename T>
   // void GetLutFileDescriptor(const std::basic_string<T>& file_name);
   
-  static void ComputeLut( int64_t M, int64_t N, int64_t fileptr);
+  void ComputeLut(const Bfloat16* x_ptr, Bfloat16* f_ptr, Bfloat16* fx_ptr);
 
 }  // namespace pim
 }  // namespace onnxruntime

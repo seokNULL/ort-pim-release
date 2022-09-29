@@ -1779,6 +1779,7 @@ std::shared_ptr<KernelRegistry> CPUExecutionProvider::GetKernelRegistry() const 
   return k.kernel_registry;
 }
 
+
 std::unique_ptr<IDataTransfer> CPUExecutionProvider::GetDataTransfer() const {
   return onnxruntime::make_unique<CPUDataTransfer>();
 }

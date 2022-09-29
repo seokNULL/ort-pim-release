@@ -71,5 +71,3 @@ namespace onnxruntime {
   // }
   
 } // namespace onnxruntime
-
-

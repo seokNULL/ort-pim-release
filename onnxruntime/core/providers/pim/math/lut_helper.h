@@ -13,6 +13,10 @@
 #include <string>
 #include <iostream>
 #include <experimental/filesystem>
+#include "gsl/gsl"
+#include "core/providers/pim/helper/pim_interface.h"
+
+#define LUT_SIZE 131072
 
 namespace lut_env_vars {
 static const std::string kLutPath = "ORT_PIM_LUT_PATH";
@@ -23,21 +27,11 @@ namespace onnxruntime {
 class LutHelper {
  public:
   LutHelper(
-    const TensorShape& A,
-    const TensorShape& B,
+    // Bfloat16* lut_data,
     const std::string& function_name
     // bool is_table_exist, 
     ) 
 {
-//Dimension check
-//Can be differed by operation
-    // ORT_ENFORCE(A.NumDimensions() == 2 || B.NumDimensions() == 1);
-    // ORT_ENFORCE(B.NumDimensions() == 2);
-    
-//Check if shape is aligned at PIM's input size
-    // bool is_aligned;
-    // is_aligned = A->Shape()[];
-    //  M_ = left.NumDimensions() == 2 ? left[1] : left[0];
 
 //Pre-existed file list
 /*Abs(), Div(), Erf(), Log(), Neg(), Pow2(), Relu(), Sigmoid(), Sqrt(), Tanh() */
@@ -51,23 +45,28 @@ class LutHelper {
     if (lut_base_dir.IsEmpty()) {
       ORT_NOT_IMPLEMENTED("[PIM Execution Provider] ORT_PIM_LUT_PATH isn't configured! Please use ORT_PIM_LUT_PATH to specify pre-existed lut data path");
     }
-
+    //For future uses
     if (!FileExistanceCheck(function_name, lut_tables)){
       status_ = common::Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT, "Target function's LUT is not generated");
     }
     else{
       const PathString file_path_str = lut_func_file.ToPathString();
-      int output_fd;
-      ORT_THROW_IF_ERROR(Env::Default().FileOpenWr(file_path_str, output_fd));
-      filedesc_ = output_fd;  
-      //ORT_THROW_IF_ERROR(Env::Default().FileClose(output_fd));
+    //   lut_data = (Bfloat16*)(mmap(0x0, LUT_SIZE, PROT_WRITE|PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS , -1, 0));
+      Bfloat16* lut_ptr = (Bfloat16*)(pim_malloc(LUT_SIZE));
+        if (lut_ptr == NULL) {
+          perror("PIM Memory Allocation Failed");
+          exit(1);
+        } 
+      readFile(file_path_str.c_str(), lut_ptr, LUT_SIZE/2);
+      for(size_t i=0; i<LUT_SIZE; i++){
+        std::cout<<"16'h"<<std::hex<<lut_ptr[i]<<std::endl;
+      }
+      lut_ptr_ = lut_ptr;
     }
   }
 
-  int64_t M() const { return M_; }
-  int64_t N() const { return N_; }
   Status State() const { return status_; }
-  int64_t FileDesc() const { return filedesc_; }
+  Bfloat16* lut_ptr() { return lut_ptr_; }
 
  private:
   bool FileExistanceCheck(const std::string& funct, std::vector<std::string>& check_tables) {
@@ -88,15 +87,28 @@ class LutHelper {
   };
 
   return path_utils::MakePathString(make_valid_name(funct),".dat");
-}
+  }
 
+  void readFile(const char * fname, Bfloat16* array, unsigned length)
+  {
+      std::ifstream fin(fname, std::ios::binary);
+      fin.seekg(0, std::ios_base::end);
+      unsigned file_len = fin.tellg();
+      if (file_len != length * sizeof(short))
+      {
+          std::cout << "Error: file length: " << file_len 
+                    << "  expected: " << length * sizeof(short) << std::endl;
+          return; 
+      }
+      
+      fin.seekg(0, std::ios_base::beg);
+      fin.read( (char *) array, file_len);
+      fin.close();
+  }
 
  private:
-  int64_t M_;
-  int64_t N_;
   Status status_;
-//   std::unique_ptr<std::fstream> fileptr_;
-  int64_t filedesc_;
+  Bfloat16* lut_ptr_;
 };
 
 }  // namespace onnxruntime

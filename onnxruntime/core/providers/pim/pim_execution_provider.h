@@ -22,7 +22,6 @@
 #include <fcntl.h>      // O_WRONLY
 #include <stdarg.h>     // va_args
 
-
 namespace onnxruntime {
 
 const int CPU_ALLOCATOR_DEVICE_ID = 0;
@@ -44,17 +43,23 @@ class PIMExecutionProvider : public IExecutionProvider {
   std::unique_ptr<onnxruntime::IDataTransfer> GetDataTransfer() const override;
   std::vector<NodeIndex> pim_nodes;
 
-  void SetFileDescriptor() {
-    // if ((pim::pl_dma_fd=open(PL_DMA_DRV, O_RDWR|O_SYNC)) < 0) {
-    //     perror("pl_dma open fail");
-    //     exit(-1);
-    // }    
-    std::cout << "DEBUG SetFileDescriptor" << std::endl; 
-  }
+  // Status OnRunStart() override;
+Status RegisterLut() override;
+Bfloat16* ReturnLut(int num_id) const override;
 
  private:
   PIMExecutionProviderInfo info_;  
   AllocatorPtr allocator_;
+  
+  Bfloat16* erf_lut;
+  Bfloat16* sqrt_lut;
+  Bfloat16* relu_lut;
+  Bfloat16* neg_lut;
+  Bfloat16* abs_lut;
+  Bfloat16* log_lut;
+  Bfloat16* sigmoid_lut;
+  Bfloat16* tanh_lut;  
+
 };
 
 }  // namespace onnxruntime

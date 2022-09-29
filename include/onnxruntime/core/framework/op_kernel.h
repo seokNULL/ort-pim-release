@@ -106,7 +106,8 @@ class OpKernelContext {
   long long tensor_alloc_dur = 0;
   long long exe_dur = 0;
   long long dma_tx = 0;
-    
+
+
   template <typename T>
   const T* Input(int index) const {
     const OrtValue* p_ml_value = GetInputMLValue(index);

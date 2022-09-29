@@ -25,7 +25,7 @@
 #include "core/profile/context.h"
 #endif
 
-// #define TRACE_EXECUTION
+#define TRACE_EXECUTION
 
 // Define this symbol to create Concurrency Visualizer markers.
 // See https://docs.microsoft.com/en-us/visualstudio/profiling/concurrency-visualizer-sdk
@@ -349,6 +349,9 @@ Status SequentialExecutor::Execute(const SessionState& session_state, const std:
       } else if (op_type == "MemcpyToHost") {
         op_kernel_context.memcpy_pim_to_cpu = true;
       }
+      /*LUT tensor return functions*/
+        //const OpKernelInfo& op_kernel_info = p_op_kernel->Info();
+        //auto provider                      = op_kernel_info.GetExecutionProvider();
 
         compute_status = p_op_kernel->Compute(&op_kernel_context);
       }
