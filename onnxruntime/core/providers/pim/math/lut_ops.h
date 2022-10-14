@@ -105,32 +105,29 @@ class Log final : public OpKernel {
   PIMInterface* pim_args;
 };
 
-template <typename T>
-class Div final : public OpKernel {
- public:
-  Div(const OpKernelInfo& info) : OpKernel(info) {
-      pim_args = new PIMInterface();
-  }
+// template <typename T>
+// class Div final : public OpKernel {
+//  public:
+//   Div(const OpKernelInfo& info) : OpKernel(info) {
+//       pim_args = new PIMInterface();
+//   }
 
-  Status Compute(OpKernelContext* context) const override;
-  PIMInterface* pim_args;
-};
+//   Status Compute(OpKernelContext* context) const override;
+//   PIMInterface* pim_args;
+// };
 
-template <typename T>
-class Pow final : public OpKernel {
- public:
-  Pow(const OpKernelInfo& info) : OpKernel(info) {
-      pim_args = new PIMInterface();
-  }
+// template <typename T>
+// class Pow final : public OpKernel {
+//  public:
+//   Pow(const OpKernelInfo& info) : OpKernel(info) {
+//       pim_args = new PIMInterface();
+//   }
 
-  Status Compute(OpKernelContext* context) const override;
-  PIMInterface* pim_args;
-};
-
-  // template <typename T>
-  // void GetLutFileDescriptor(const std::basic_string<T>& file_name);
+//   Status Compute(OpKernelContext* context) const override;
+//   PIMInterface* pim_args;
+// };
   
-  void ComputeLut(const Bfloat16* x_ptr, Bfloat16* f_ptr, Bfloat16* fx_ptr);
+void ComputeLut(int dma_fd, ioctl_info* dma_info, Bfloat16* f_ptr, OpKernelContext* ctx);
 
 }  // namespace pim
 }  // namespace onnxruntime

@@ -22,6 +22,8 @@
 #include <fcntl.h>      // O_WRONLY
 #include <stdarg.h>     // va_args
 
+#define LUT_OPS_NUM 7
+
 namespace onnxruntime {
 
 const int CPU_ALLOCATOR_DEVICE_ID = 0;
@@ -45,23 +47,30 @@ class PIMExecutionProvider : public IExecutionProvider {
 
   // Status OnRunStart() override;
 Status RegisterLut() override;
-Bfloat16* ReturnLut(int num_id) const override;
+Bfloat16* ReturnLut(int funct_id) const override;
 
  private:
   PIMExecutionProviderInfo info_;  
   AllocatorPtr allocator_;
   
-  Bfloat16* erf_lut;
-  Bfloat16* sqrt_lut;
-  Bfloat16* relu_lut;
-  Bfloat16* neg_lut;
-  Bfloat16* abs_lut;
-  Bfloat16* log_lut;
-  Bfloat16* sigmoid_lut;
-  Bfloat16* tanh_lut;  
+  // Bfloat16* erf_lut;
+  // Bfloat16* sqrt_lut;
+  // Bfloat16* relu_lut;
+  // Bfloat16* neg_lut;
+  // Bfloat16* abs_lut;
+  // Bfloat16* log_lut;
+  // Bfloat16* sigmoid_lut;
+  // Bfloat16* tanh_lut;
+
+  Bfloat16* lut_ptr_arr[LUT_OPS_NUM];
+  // Bfloat16** lut_ptr_arr;
+
+
+// void readFile(const char * fname, Bfloat16* array, unsigned length);
+// bool FileExistanceCheck(const std::string& funct, std::vector<std::string>& check_tables);
+// PathString MakeLutFileName(const std::string& funct);
+
 
 };
 
 }  // namespace onnxruntime
-
-

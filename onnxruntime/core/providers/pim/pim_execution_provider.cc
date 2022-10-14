@@ -436,20 +436,13 @@ KernelRegistryAndStatus GetPimKernelRegistry() {
   return ret;
 }
 
-
-
-
 } // namespace pim
-
-
 
 std::shared_ptr<KernelRegistry>
 PIMExecutionProvider::GetKernelRegistry() const {
   static KernelRegistryAndStatus k = onnxruntime::pim::GetPimKernelRegistry();
 
   //LUT table create & initialize in PIM memory
-  // RegisterLut();
-  
   // throw if the registry failed to initialize
   ORT_THROW_IF_ERROR(k.st);
   
@@ -460,20 +453,14 @@ Status PIMExecutionProvider::RegisterLut() {
     // std::vector<std::string> lut_tables = {"Abs","Div","Erf","Log","Neg","Pow","Relu","Sigmoid","Sqrt","Tanh"};
     std::vector<std::string> lut_tables = {"Abs","Erf","Log","Neg","Relu","Sigmoid","Sqrt","Tanh"};
     //                                        0,     1,     2,    3,    4,       5,      6,      7
-    
-    //Need to be fixed as iterative
-    //for(auto it...)
     Status st;
-    LutHelper helper("Sqrt");
-    sqrt_lut = helper.lut_ptr();
+    LutHelper helper(LUT_OPS_NUM, lut_ptr_arr);
     st = helper.State();
-    
     return st;
 }
 
-Bfloat16* PIMExecutionProvider::ReturnLut(int num_id) const {
-    //Need to be fiex with num_id fucntional
-    return sqrt_lut;
+Bfloat16* PIMExecutionProvider::ReturnLut(int funct_id) const {
+    return lut_ptr_arr[funct_id];
 }
 
 std::unique_ptr<onnxruntime::IDataTransfer> PIMExecutionProvider::GetDataTransfer() const {

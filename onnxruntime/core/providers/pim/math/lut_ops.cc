@@ -91,8 +91,8 @@ REG_ELEMENTWISE_TYPED_KERNEL(Tanh, 13, float, Tanh);
 REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Sqrt, 6, 12, float, Sqrt);
 REG_ELEMENTWISE_TYPED_KERNEL(Sqrt, 13, float, Sqrt);
 
-REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Div, 7, 12, float, Div);
-REG_ELEMENTWISE_TYPED_KERNEL(Div, 13, float, Div);
+// REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Div, 7, 12, float, Div);
+// REG_ELEMENTWISE_TYPED_KERNEL(Div, 13, float, Div);
 
 REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Log, 6, 12, float, Log);
 REG_ELEMENTWISE_TYPED_KERNEL(Log, 13, float, Log);
@@ -107,14 +107,7 @@ REG_ELEMENTWISE_TYPED_KERNEL(Abs, 13, float, Abs);
 //Pow functions need to be checked for opset version error!! 
 //Now we temporally enlarged kernel start&end version to 7~13. 
 //Any exception case with lower opset version can be happened.
-REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Pow, 7, 13, float, Pow);
-// REG_ELEMENTWISE_TYPED_KERNEL(Pow, 12, float, Pow);
-// REG_ELEMENTWISE_VERSIONED_KERNEL_NONT(Pow, 7, 11, Pow, float);
-// To reduce templetization we choose to support the below types for both
-// base and the exponent. This gives us 16 permutations
-// REG_ELEMENTWISE_VERSIONED_KERNEL_NONT(Pow, 12, 12, Pow, int32_t, int64_t, float);
-// REG_ELEMENTWISE_KERNEL_NONT(Pow, 13, Pow, int32_t, int64_t, float);
-
+// REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Pow, 7, 13, float, Pow);
 
 REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Relu, 6, 12, float, Relu);
 REG_ELEMENTWISE_TYPED_KERNEL(Relu, 13, float, Relu);
@@ -125,47 +118,58 @@ REG_ELEMENTWISE_TYPED_KERNEL(Sigmoid, 13, float, Sigmoid);
 
 template <typename T>
 Status Erf<T>::Compute(OpKernelContext* ctx) const {
-  
-  // auto  p_op_kernel = *ctx.kernel_;
+  // const OpKernel*     p_op_kernel = ctx->kernel_;
   // const OpKernelInfo& op_kernel_info = p_op_kernel->Info();
   // auto  PimProvider                  = op_kernel_info.GetExecutionProvider();
-  
-  const auto* X = ctx->Input<Tensor>(0);
-  const auto& x_shape = X->Shape();
-  auto* Y = ctx->Output(0, x_shape);
-  
-// const size_t N = static_cast<size_t>(x_shape.Size());
-  const Bfloat16* x_pim_ptr = X->Data<Bfloat16>();
-  // Bfloat16* fx_pim_ptr = erf_lut;
-  Bfloat16* fx_pim_ptr;
-  Bfloat16* y_pim_ptr = Y->MutableData<Bfloat16>();
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
 
-  ComputeLut(x_pim_ptr, fx_pim_ptr, y_pim_ptr);
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(1);
+  // Bfloat16* fx_pim_ptr;
+  //  for(size_t i=0; i<65536; i++){
+  //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
+  //   }
+  int pl_dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* set_info = pim_args->GetSetInfo();
+
+  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
 
 template <typename T>
 Status Tanh<T>::Compute(OpKernelContext* ctx) const {
+  // const OpKernel*     p_op_kernel = ctx->kernel_;
+  // const OpKernelInfo& op_kernel_info = p_op_kernel->Info();
+  // auto  PimProvider                  = op_kernel_info.GetExecutionProvider();
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
 
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(7);
+  // Bfloat16* fx_pim_ptr;
+  //  for(size_t i=0; i<65536; i++){
+  //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
+  //   }
+  int pl_dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* set_info = pim_args->GetSetInfo();
 
-return Status::OK();
-}
-
-
-template <typename T>
-Status Div<T>::Compute(OpKernelContext* ctx) const {
-
-
-return Status::OK();
-}
-
-template <typename T>
-Status Pow<T>::Compute(OpKernelContext* ctx) const {
-
+  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
+
+
+// template <typename T>
+// Status Div<T>::Compute(OpKernelContext* ctx) const {
+
+
+// return Status::OK();
+// }
+
+// template <typename T>
+// Status Pow<T>::Compute(OpKernelContext* ctx) const {
+
+
+// return Status::OK();
+// }
 
 
 template <typename T>
@@ -189,22 +193,15 @@ Status Sqrt<T>::Compute(OpKernelContext* ctx) const {
   // auto  PimProvider                  = op_kernel_info.GetExecutionProvider();
   const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
 
-  const auto* X = ctx->Input<Tensor>(0);
-  const auto& x_shape = X->Shape();
-  auto* Y = ctx->Output(0, x_shape);
-  
-// const size_t N = static_cast<size_t>(x_shape.Size());
-  const Bfloat16* x_pim_ptr = X->Data<Bfloat16>();
   Bfloat16* fx_pim_ptr = provider->ReturnLut(6);
-
   // Bfloat16* fx_pim_ptr;
   //  for(size_t i=0; i<65536; i++){
   //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
   //   }
-  
-  Bfloat16* y_pim_ptr = Y->MutableData<Bfloat16>();
+  int pl_dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* set_info = pim_args->GetSetInfo();
 
-  ComputeLut(x_pim_ptr, fx_pim_ptr, y_pim_ptr);
+  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -231,11 +228,55 @@ return Status::OK();
 }
 
 
-void ComputeLut(const Bfloat16* x_ptr, Bfloat16* f_ptr, Bfloat16* fx_ptr) {
-  
-  // int pl_dma_fd = pim_args->GetFileDescriptor();
-  // ioctl_info* set_info = pim_args->GetSetInfo();
-  
+void ComputeLut(int dma_fd, ioctl_info* dma_info, Bfloat16* f_ptr, OpKernelContext* ctx) {
+
+  //Setting input information (x and f)
+  const auto* X = ctx->Input<Tensor>(0);
+  const auto& x_shape = X->Shape();
+  auto x_dim = X->Shape().NumDimensions();
+  const Bfloat16* x_data_ptr = X->Data<Bfloat16>();
+
+  int64_t batch_size = X->Shape()[0];
+    ORT_ENFORCE(batch_size == 1, "ONLY BATCH 1 FOR NOW");
+  int64_t p_size = X->Shape()[1];
+  int64_t q_size = X->Shape()[2];
+  int64_t x_size = p_size * q_size;
+  int64_t f_size = (1<<16);//Assume full-precision
+
+  //Setting output information (y=f(x))
+  // Tensor* Y = ctx->Output(0, x_shape);
+  Tensor* Y = ctx->Output(0, TensorShape({batch_size, p_size, q_size}), true);
+  Bfloat16* y_data_ptr = Y->MutableData<Bfloat16>();
+  Y->SetIsPim();
+
+  int64_t dma_tx = 0;
+  void   *dma_tx_ptr;
+  dma_tx_ptr = &dma_tx;
+
+    dma_info->srcA_ptr      = &x_data_ptr[0];
+    dma_info->srcB_ptr      = &f_ptr[0];
+    dma_info->dstC_ptr      = &y_data_ptr[0];
+    dma_info->srcA_va   = (uint64_t) &x_data_ptr[0];
+    dma_info->srcB_va   = (uint64_t) &f_ptr[0];
+    dma_info->dstC_va   = (uint64_t) &y_data_ptr[0];
+    dma_info->srcA_size = p_size*q_size*sizeof(Bfloat16);
+    dma_info->srcB_size = f_size*sizeof(Bfloat16);
+    dma_info->dstC_size = p_size*q_size*sizeof(Bfloat16);
+    dma_info->p_size    = p_size;
+    dma_info->q_size    = q_size;
+    dma_info->r_size    = q_size;
+    
+    dma_info->dma_tx     = dma_tx;
+    dma_info->dma_tx_ptr = dma_tx_ptr;
+
+    auto begin_exe = std::chrono::high_resolution_clock::now();
+    // if (ioctl(dma_fd, LUT_OPS, dma_info) < 0) {
+    //     printf("ERROR DMA \n");
+    //     exit(-1);
+    // }   
+    long long exe_dur = TimeDiffMicroSeconds(begin_exe);
+    ctx->exe_dur = exe_dur;
+    ctx->dma_tx = dma_tx;
 
   return;
 }
