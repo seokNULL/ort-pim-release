@@ -22,6 +22,18 @@
 #include <fcntl.h>      // O_WRONLY
 #include <stdarg.h>     // va_args
 
+#include "core/common/common.h"
+#include "core/platform/ort_mutex.h"
+#include "core/common/path_utils.h"
+#include "core/framework/tensorprotoutils.h"
+#include "core/platform/env.h"
+#include "core/platform/env_var_utils.h"
+
+#include <experimental/filesystem>
+#include "gsl/gsl"
+#include "core/providers/pim/helper/pim_interface.h"
+
+#define LUT_SIZE 65536
 #define LUT_OPS_NUM 7
 
 namespace onnxruntime {
@@ -49,6 +61,10 @@ class PIMExecutionProvider : public IExecutionProvider {
 Status RegisterLut() override;
 Bfloat16* ReturnLut(int funct_id) const override;
 
+void ReadFile(const char * fname, Bfloat16* array, size_t length);
+bool FileExistanceCheck(const std::string& funct, std::vector<std::string>& check_tables);
+PathString MakeLutFileName(const std::string& funct);
+
  private:
   PIMExecutionProviderInfo info_;  
   AllocatorPtr allocator_;
@@ -64,12 +80,6 @@ Bfloat16* ReturnLut(int funct_id) const override;
 
   Bfloat16* lut_ptr_arr[LUT_OPS_NUM];
   // Bfloat16** lut_ptr_arr;
-
-
-// void readFile(const char * fname, Bfloat16* array, unsigned length);
-// bool FileExistanceCheck(const std::string& funct, std::vector<std::string>& check_tables);
-// PathString MakeLutFileName(const std::string& funct);
-
 
 };
 

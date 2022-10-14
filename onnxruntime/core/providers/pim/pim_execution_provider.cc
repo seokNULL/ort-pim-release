@@ -23,11 +23,15 @@
 #include <fstream>
 #include <string>
 #include "core/providers/pim/math/lut_ops.h"
-#include "core/providers/pim/math/lut_helper.h"
+// #include "core/providers/pim/math/lut_helper.h"
 
 #include "core/providers/pim/helper/pim_init.h"
 
 using namespace onnxruntime::common;
+
+namespace lut_env_vars {
+static const std::string kLutPath = "ORT_PIM_LUT_PATH";
+}  // namespace tensorrt_env_vars
 
 // #define MANUAL
 
@@ -438,6 +442,44 @@ KernelRegistryAndStatus GetPimKernelRegistry() {
 
 } // namespace pim
 
+bool PIMExecutionProvider::FileExistanceCheck(const std::string& funct, std::vector<std::string>& check_tables) {
+// Furture works
+    auto check_func_it = find(check_tables.begin(), check_tables.end(), funct);
+    if(check_func_it == check_tables.end()){
+        return false;
+    }
+    else {
+        return true;
+    }
+}
+
+PathString PIMExecutionProvider::MakeLutFileName(const std::string& funct) {
+  auto make_valid_name = [](std::string name) {
+    std::replace_if(
+        name.begin(), name.end(), [](char c) { return !std::isalnum(c); }, '_');
+    return name;
+  };
+  return path_utils::MakePathString(make_valid_name(funct),".dat");
+}
+
+void PIMExecutionProvider::ReadFile(const char * fname, Bfloat16* array, size_t length){
+      std::ifstream fin(fname, std::ios::binary);
+      fin.seekg(0, std::ios_base::end);
+      unsigned file_len = fin.tellg();
+      if (file_len != length * sizeof(short))
+      {
+          std::cout << "Error: file length: " << file_len 
+                    << "  expected: " << length * sizeof(short) << std::endl;
+          return; 
+      }
+      
+      fin.seekg(0, std::ios_base::beg);
+      fin.read( (char *) array, file_len);
+      fin.close();
+}
+
+
+
 std::shared_ptr<KernelRegistry>
 PIMExecutionProvider::GetKernelRegistry() const {
   static KernelRegistryAndStatus k = onnxruntime::pim::GetPimKernelRegistry();
@@ -450,12 +492,45 @@ PIMExecutionProvider::GetKernelRegistry() const {
 }
 
 Status PIMExecutionProvider::RegisterLut() {
-    // std::vector<std::string> lut_tables = {"Abs","Div","Erf","Log","Neg","Pow","Relu","Sigmoid","Sqrt","Tanh"};
+    Status st;
+    // LutHelper helper(LUT_OPS_NUM, lut_ptr_arr);
+//Pre-existed file list
+/*Abs(), Div(), Erf(), Log(), Neg(), Pow2(), Relu(), Sigmoid(), Sqrt(), Tanh() */
     std::vector<std::string> lut_tables = {"Abs","Erf","Log","Neg","Relu","Sigmoid","Sqrt","Tanh"};
     //                                        0,     1,     2,    3,    4,       5,      6,      7
-    Status st;
-    LutHelper helper(LUT_OPS_NUM, lut_ptr_arr);
-    st = helper.State();
+
+    Path lut_base_dir;
+    Path lut_func_file;
+    std::string function_name;
+    lut_base_dir = Path::Parse(ToPathString(Env::Default().GetEnvironmentVar(lut_env_vars::kLutPath)));
+
+  for(size_t i=0; i<=LUT_OPS_NUM; i++){
+    function_name = lut_tables[i];
+    lut_func_file = lut_base_dir / Path::Parse(MakeLutFileName(function_name));
+
+    if (lut_base_dir.IsEmpty()) {
+      ORT_NOT_IMPLEMENTED("[PIM Execution Provider] ORT_PIM_LUT_PATH isn't configured! Please use ORT_PIM_LUT_PATH to specify pre-existed lut data path");
+    }
+    //For future uses
+    if (!FileExistanceCheck(function_name, lut_tables)){
+      st = common::Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT, "Target function's LUT is not generated");
+    }
+    else{
+      const PathString file_path_str = lut_func_file.ToPathString();
+      Bfloat16* lut_ptr = (Bfloat16*)(pim_malloc(LUT_SIZE*sizeof(Bfloat16)));
+      if (lut_ptr == NULL) {
+        perror("PIM Memory Allocation Failed");
+        exit(1);
+      } 
+      ReadFile(file_path_str.c_str(), lut_ptr, LUT_SIZE);
+      // for(size_t i=0; i<LUT_SIZE; i++){
+      //   std::cout<<"16'h"<<std::hex<<lut_ptr[i]<<std::endl;
+      // }
+      LOGS_DEFAULT(WARNING) << "PIM LUT tensor is allocated and initialized! Op type:" <<function_name;
+      lut_ptr_arr[i] = lut_ptr;
+    }
+  }
+    // st = helper.State();
     return st;
 }
 

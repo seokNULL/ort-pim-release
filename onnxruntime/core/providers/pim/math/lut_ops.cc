@@ -7,7 +7,7 @@
 #include "core/framework/data_types_internal.h"
 
 #include <cmath>
-#include "lut_helper.h"
+// #include "lut_helper.h"
 #include "core/providers/pim/math/lut_ops.h"
 #include "core/providers/pim/pim_execution_provider.h"
 
@@ -118,11 +118,7 @@ REG_ELEMENTWISE_TYPED_KERNEL(Sigmoid, 13, float, Sigmoid);
 
 template <typename T>
 Status Erf<T>::Compute(OpKernelContext* ctx) const {
-  // const OpKernel*     p_op_kernel = ctx->kernel_;
-  // const OpKernelInfo& op_kernel_info = p_op_kernel->Info();
-  // auto  PimProvider                  = op_kernel_info.GetExecutionProvider();
   const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
-
   Bfloat16* fx_pim_ptr = provider->ReturnLut(1);
   // Bfloat16* fx_pim_ptr;
   //  for(size_t i=0; i<65536; i++){
@@ -130,7 +126,6 @@ Status Erf<T>::Compute(OpKernelContext* ctx) const {
   //   }
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
-
   ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
@@ -138,11 +133,7 @@ return Status::OK();
 
 template <typename T>
 Status Tanh<T>::Compute(OpKernelContext* ctx) const {
-  // const OpKernel*     p_op_kernel = ctx->kernel_;
-  // const OpKernelInfo& op_kernel_info = p_op_kernel->Info();
-  // auto  PimProvider                  = op_kernel_info.GetExecutionProvider();
   const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
-
   Bfloat16* fx_pim_ptr = provider->ReturnLut(7);
   // Bfloat16* fx_pim_ptr;
   //  for(size_t i=0; i<65536; i++){
@@ -174,14 +165,30 @@ return Status::OK();
 
 template <typename T>
 Status Relu<T>::Compute(OpKernelContext* ctx) const {
-
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(4);
+  // Bfloat16* fx_pim_ptr;
+  //  for(size_t i=0; i<65536; i++){
+  //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
+  //   }
+  int pl_dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* set_info = pim_args->GetSetInfo();
+  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
 
 template <typename T>
 Status Sigmoid<T>::Compute(OpKernelContext* ctx) const {
-
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(5);
+  // Bfloat16* fx_pim_ptr;
+  //  for(size_t i=0; i<65536; i++){
+  //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
+  //   }
+  int pl_dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* set_info = pim_args->GetSetInfo();
+  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -208,21 +215,45 @@ return Status::OK();
 
 template <typename T>
 Status Neg<T>::Compute(OpKernelContext* ctx) const {
-
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(3);
+  // Bfloat16* fx_pim_ptr;
+  //  for(size_t i=0; i<65536; i++){
+  //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
+  //   }
+  int pl_dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* set_info = pim_args->GetSetInfo();
+  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
 
 template <typename T>
 Status Abs<T>::Compute(OpKernelContext* ctx) const {
-
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(0);
+  // Bfloat16* fx_pim_ptr;
+  //  for(size_t i=0; i<65536; i++){
+  //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
+  //   }
+  int pl_dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* set_info = pim_args->GetSetInfo();
+  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
 
 template <typename T>
 Status Log<T>::Compute(OpKernelContext* ctx) const {
-
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(2);
+  // Bfloat16* fx_pim_ptr;
+  //  for(size_t i=0; i<65536; i++){
+  //   std::cout<<"16'h"<<std::hex<<fx_pim_ptr[i]<<std::endl;
+  //   }
+  int pl_dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* set_info = pim_args->GetSetInfo();
+  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -270,10 +301,10 @@ void ComputeLut(int dma_fd, ioctl_info* dma_info, Bfloat16* f_ptr, OpKernelConte
     dma_info->dma_tx_ptr = dma_tx_ptr;
 
     auto begin_exe = std::chrono::high_resolution_clock::now();
-    // if (ioctl(dma_fd, LUT_OPS, dma_info) < 0) {
-    //     printf("ERROR DMA \n");
-    //     exit(-1);
-    // }   
+    if (ioctl(dma_fd, LUT_OPS, dma_info) < 0) {
+        printf("ERROR DMA \n");
+        exit(-1);
+    }   
     long long exe_dur = TimeDiffMicroSeconds(begin_exe);
     ctx->exe_dur = exe_dur;
     ctx->dma_tx = dma_tx;
