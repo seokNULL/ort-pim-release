@@ -107,7 +107,7 @@ REG_ELEMENTWISE_TYPED_KERNEL(Abs, 13, float, Abs);
 //Pow functions need to be checked for opset version error!! 
 //Now we temporally enlarged kernel start&end version to 7~13. 
 //Any exception case with lower opset version can be happened.
-// REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Pow, 7, 13, float, Pow);
+REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Pow, 7, 13, float, Pow);
 
 REG_ELEMENTWISE_VERSIONED_TYPED_KERNEL(Relu, 6, 12, float, Relu);
 REG_ELEMENTWISE_TYPED_KERNEL(Relu, 13, float, Relu);
@@ -126,7 +126,7 @@ Status Erf<T>::Compute(OpKernelContext* ctx) const {
   //   }
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
-  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+  ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -142,7 +142,7 @@ Status Tanh<T>::Compute(OpKernelContext* ctx) const {
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
 
-  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+  ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -154,13 +154,103 @@ return Status::OK();
 
 // return Status::OK();
 // }
+union BiasValue {
+  uint32_t       u32;
+  float          f32;
+  struct
+    {
+      unsigned short back : 16;
+      unsigned short front : 16;
+    } half_U;
+};
 
-// template <typename T>
-// Status Pow<T>::Compute(OpKernelContext* ctx) const {
+template <typename T>
+Status Pow<T>::Compute(OpKernelContext* ctx) const {
+  const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
+
+  /*Temporal implement of power function, it needs to be check berfor executing graph!
+  if (bias dimension==0) && (store as unsigned short) && (value is float)*/
+  BiasValue bias;
+  bias.u32 = 0U;
+  const auto* Bias = ctx->Input<Tensor>(1);
+  // const auto& bias_shape = Bias->Shape();
+  // auto        bias_dim   = Bias->Shape().NumDimensions(); 
+  // onnxruntime::MLDataType data_type = Bias->DataType();
+  const auto* bias_value = Bias->DataRaw();
+  bias.half_U.front = reinterpret_cast<const unsigned short*>(bias_value)[0];
+  
+  
+  const auto* X = ctx->Input<Tensor>(0);
+  const auto& x_shape = X->Shape();
+  auto x_dim = X->Shape().NumDimensions();
+  const Bfloat16* x_data_ptr = X->Data<Bfloat16>();
+
+  int64_t batch_size, p_size, q_size, f_size;
+  Bfloat16* y_data_ptr;
+  f_size = (1<<16);//Assume full-precision
+
+  if(x_dim==3){
+    batch_size = X->Shape()[0];
+     ORT_ENFORCE(batch_size == 1, "ONLY BATCH 1 FOR NOW");
+    p_size = X->Shape()[1];
+    q_size = X->Shape()[2];
+  
+    Tensor* Y = ctx->Output(0, TensorShape({batch_size, p_size, q_size}), true);
+    y_data_ptr = Y->MutableData<Bfloat16>();
+    Y->SetIsPim();
+  }
+  else if(x_dim==2){
+    p_size = X->Shape()[0];
+    q_size = X->Shape()[1];
+  
+    //Setting output information (y=f(x))
+    // Tensor* Y = ctx->Output(0, x_shape);
+    Tensor* Y = ctx->Output(0, TensorShape({p_size, q_size}), true);
+    y_data_ptr = Y->MutableData<Bfloat16>();
+    Y->SetIsPim();    
+  }
 
 
-// return Status::OK();
-// }
+  int dma_fd = pim_args->GetFileDescriptor();
+  ioctl_info* dma_info = pim_args->GetSetInfo();
+
+  Bfloat16* fx_pim_ptr = provider->ReturnLut(8);
+
+  int64_t dma_tx = 0;
+  void   *dma_tx_ptr;
+  dma_tx_ptr = &dma_tx;
+
+    dma_info->srcA_ptr      = &x_data_ptr[0];
+    dma_info->srcB_ptr      = &fx_pim_ptr[0];
+    dma_info->dstC_ptr      = &y_data_ptr[0];
+    dma_info->srcA_va       = (uint64_t) &x_data_ptr[0];
+    dma_info->srcB_va       = (uint64_t) &fx_pim_ptr[0];
+    dma_info->dstC_va       = (uint64_t) &y_data_ptr[0];
+    dma_info->srcA_size     = p_size*q_size*sizeof(Bfloat16);
+    dma_info->srcB_size     = f_size*sizeof(Bfloat16);
+    dma_info->dstC_size     = p_size*q_size*sizeof(Bfloat16);
+    dma_info->p_size        = p_size;
+    dma_info->q_size        = q_size;
+    dma_info->r_size        = q_size;
+    
+    dma_info->dma_tx     = dma_tx;
+    dma_info->dma_tx_ptr = dma_tx_ptr;
+
+    auto begin_exe = std::chrono::high_resolution_clock::now();
+    if (ioctl(dma_fd, LUT_OPS, dma_info) < 0) {
+        printf("ERROR DMA \n");
+        exit(-1);
+    }   
+    long long exe_dur = TimeDiffMicroSeconds(begin_exe);
+    ctx->exe_dur = exe_dur;
+    ctx->dma_tx = dma_tx;
+
+  
+
+  // ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+
+return Status::OK();
+}
 
 
 template <typename T>
@@ -173,7 +263,7 @@ Status Relu<T>::Compute(OpKernelContext* ctx) const {
   //   }
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
-  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+  ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -188,7 +278,7 @@ Status Sigmoid<T>::Compute(OpKernelContext* ctx) const {
   //   }
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
-  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+  ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -208,7 +298,7 @@ Status Sqrt<T>::Compute(OpKernelContext* ctx) const {
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
 
-  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+  ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -223,7 +313,7 @@ Status Neg<T>::Compute(OpKernelContext* ctx) const {
   //   }
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
-  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+  ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -238,7 +328,7 @@ Status Abs<T>::Compute(OpKernelContext* ctx) const {
   //   }
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
-  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+  ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
@@ -253,33 +343,45 @@ Status Log<T>::Compute(OpKernelContext* ctx) const {
   //   }
   int pl_dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* set_info = pim_args->GetSetInfo();
-  ComputeLut(pl_dma_fd, set_info, fx_pim_ptr, ctx);
+  ComputeLutInternal(pl_dma_fd, set_info, fx_pim_ptr, ctx);
 
 return Status::OK();
 }
 
 
-void ComputeLut(int dma_fd, ioctl_info* dma_info, Bfloat16* f_ptr, OpKernelContext* ctx) {
+void ComputeLutInternal(int dma_fd, ioctl_info* dma_info, Bfloat16* f_ptr, OpKernelContext* ctx) {
 
   //Setting input information (x and f)
   const auto* X = ctx->Input<Tensor>(0);
   const auto& x_shape = X->Shape();
   auto x_dim = X->Shape().NumDimensions();
   const Bfloat16* x_data_ptr = X->Data<Bfloat16>();
+  
+  int64_t batch_size, p_size, q_size, f_size;
+  Bfloat16* y_data_ptr;
+  f_size = (1<<16);//Assume full-precision
 
-  int64_t batch_size = X->Shape()[0];
-    ORT_ENFORCE(batch_size == 1, "ONLY BATCH 1 FOR NOW");
-  int64_t p_size = X->Shape()[1];
-  int64_t q_size = X->Shape()[2];
-  int64_t x_size = p_size * q_size;
-  int64_t f_size = (1<<16);//Assume full-precision
-
-  //Setting output information (y=f(x))
-  // Tensor* Y = ctx->Output(0, x_shape);
-  Tensor* Y = ctx->Output(0, TensorShape({batch_size, p_size, q_size}), true);
-  Bfloat16* y_data_ptr = Y->MutableData<Bfloat16>();
-  Y->SetIsPim();
-
+  if(x_dim==3){
+    batch_size = X->Shape()[0];
+     ORT_ENFORCE(batch_size == 1, "ONLY BATCH 1 FOR NOW");
+    p_size = X->Shape()[1];
+    q_size = X->Shape()[2];
+  
+    Tensor* Y = ctx->Output(0, TensorShape({batch_size, p_size, q_size}), true);
+    y_data_ptr = Y->MutableData<Bfloat16>();
+    Y->SetIsPim();
+  }
+  else if(x_dim==2){
+    p_size = X->Shape()[0];
+    q_size = X->Shape()[1];
+  
+    //Setting output information (y=f(x))
+    // Tensor* Y = ctx->Output(0, x_shape);
+    Tensor* Y = ctx->Output(0, TensorShape({p_size, q_size}), true);
+    y_data_ptr = Y->MutableData<Bfloat16>();
+    Y->SetIsPim();    
+  }
+  
   int64_t dma_tx = 0;
   void   *dma_tx_ptr;
   dma_tx_ptr = &dma_tx;
@@ -287,15 +389,15 @@ void ComputeLut(int dma_fd, ioctl_info* dma_info, Bfloat16* f_ptr, OpKernelConte
     dma_info->srcA_ptr      = &x_data_ptr[0];
     dma_info->srcB_ptr      = &f_ptr[0];
     dma_info->dstC_ptr      = &y_data_ptr[0];
-    dma_info->srcA_va   = (uint64_t) &x_data_ptr[0];
-    dma_info->srcB_va   = (uint64_t) &f_ptr[0];
-    dma_info->dstC_va   = (uint64_t) &y_data_ptr[0];
-    dma_info->srcA_size = p_size*q_size*sizeof(Bfloat16);
-    dma_info->srcB_size = f_size*sizeof(Bfloat16);
-    dma_info->dstC_size = p_size*q_size*sizeof(Bfloat16);
-    dma_info->p_size    = p_size;
-    dma_info->q_size    = q_size;
-    dma_info->r_size    = q_size;
+    dma_info->srcA_va       = (uint64_t) &x_data_ptr[0];
+    dma_info->srcB_va       = (uint64_t) &f_ptr[0];
+    dma_info->dstC_va       = (uint64_t) &y_data_ptr[0];
+    dma_info->srcA_size     = p_size*q_size*sizeof(Bfloat16);
+    dma_info->srcB_size     = f_size*sizeof(Bfloat16);
+    dma_info->dstC_size     = p_size*q_size*sizeof(Bfloat16);
+    dma_info->p_size        = p_size;
+    dma_info->q_size        = q_size;
+    dma_info->r_size        = q_size;
     
     dma_info->dma_tx     = dma_tx;
     dma_info->dma_tx_ptr = dma_tx_ptr;

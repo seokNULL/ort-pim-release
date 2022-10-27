@@ -34,7 +34,7 @@
 #include "core/providers/pim/helper/pim_interface.h"
 
 #define LUT_SIZE 65536
-#define LUT_OPS_NUM 7
+#define LUT_OPS_NUM 8
 
 namespace onnxruntime {
 

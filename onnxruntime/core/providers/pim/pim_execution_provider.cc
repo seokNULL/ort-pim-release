@@ -306,8 +306,8 @@ class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 
 // class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 12, float, Div);
 // class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Div);
 
-// class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 13, float, Pow);
-// // class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 12, float, Pow);
+class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 13, float, Pow);
+class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 12, float, Pow);
 
 // class ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 11, Pow);
 // class ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 12, 12, Pow);
@@ -390,7 +390,7 @@ static Status RegisterPimKernels(KernelRegistry& kernel_registry) {
       BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Sqrt)>,
       
 
-      // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 13, float, Pow)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 7, 13, float, Pow)>,
       
 
 
@@ -496,8 +496,8 @@ Status PIMExecutionProvider::RegisterLut() {
     // LutHelper helper(LUT_OPS_NUM, lut_ptr_arr);
 //Pre-existed file list
 /*Abs(), Div(), Erf(), Log(), Neg(), Pow2(), Relu(), Sigmoid(), Sqrt(), Tanh() */
-    std::vector<std::string> lut_tables = {"Abs","Erf","Log","Neg","Relu","Sigmoid","Sqrt","Tanh"};
-    //                                        0,     1,     2,    3,    4,       5,      6,      7
+    std::vector<std::string> lut_tables = {"Abs","Erf","Log","Neg","Relu","Sigmoid","Sqrt","Tanh", "Pow"};
+    //                                        0,     1,     2,    3,    4,       5,      6,      7     8
 
     Path lut_base_dir;
     Path lut_func_file;
