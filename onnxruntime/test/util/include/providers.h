@@ -34,4 +34,6 @@
 #ifdef USE_MIGRAPHX
 #include "core/providers/migraphx/migraphx_provider_factory.h"
 #endif
-
+#ifdef USE_PIM
+#include "core/providers/pim/pim_provider_factory_creator.h"
+#endif

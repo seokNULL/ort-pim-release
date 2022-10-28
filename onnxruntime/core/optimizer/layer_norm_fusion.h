@@ -21,7 +21,7 @@ class LayerNormFusion : public GraphTransformer {
   LayerNormFusion(const std::unordered_set<std::string>& compatible_execution_providers = {}) noexcept
       : GraphTransformer("LayerNormFusion", compatible_execution_providers) {}
 
-  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const override;
+  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const;
 };
 
 /**
@@ -38,7 +38,7 @@ class SimplifiedLayerNormFusion : public GraphTransformer {
   SimplifiedLayerNormFusion(const std::unordered_set<std::string>& compatible_execution_providers = {}) noexcept
       : GraphTransformer("SimplifiedLayerNormFusion", compatible_execution_providers) {}
 
-  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const override;
+  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const;
 };
 
 }  // namespace onnxruntime

@@ -167,19 +167,6 @@ union BiasValue {
 template <typename T>
 Status Pow<T>::Compute(OpKernelContext* ctx) const {
   const onnxruntime::IExecutionProvider* provider = Info().GetExecutionProvider();
-
-  /*Temporal implement of power function, it needs to be check berfor executing graph!
-  if (bias dimension==0) && (store as unsigned short) && (value is float)*/
-  BiasValue bias;
-  bias.u32 = 0U;
-  const auto* Bias = ctx->Input<Tensor>(1);
-  // const auto& bias_shape = Bias->Shape();
-  // auto        bias_dim   = Bias->Shape().NumDimensions(); 
-  // onnxruntime::MLDataType data_type = Bias->DataType();
-  const auto* bias_value = Bias->DataRaw();
-  bias.half_U.front = reinterpret_cast<const unsigned short*>(bias_value)[0];
-  
-  
   const auto* X = ctx->Input<Tensor>(0);
   const auto& x_shape = X->Shape();
   auto x_dim = X->Shape().NumDimensions();
@@ -209,11 +196,20 @@ Status Pow<T>::Compute(OpKernelContext* ctx) const {
     y_data_ptr = Y->MutableData<Bfloat16>();
     Y->SetIsPim();    
   }
-
-
   int dma_fd = pim_args->GetFileDescriptor();
   ioctl_info* dma_info = pim_args->GetSetInfo();
-
+  
+  //Pow2
+  /*Temporal implement of power function, it needs to be check berfor executing graph!
+  if (bias dimension==0) && (store as unsigned short) && (value is float)*/
+  BiasValue bias;
+  bias.u32 = 0U;
+  const auto* Bias = ctx->Input<Tensor>(1);
+  // const auto& bias_shape = Bias->Shape();
+  // auto        bias_dim   = Bias->Shape().NumDimensions(); 
+  // onnxruntime::MLDataType data_type = Bias->DataType();
+  const auto* bias_value = Bias->DataRaw();
+  bias.half_U.front = reinterpret_cast<const unsigned short*>(bias_value)[0];  
   Bfloat16* fx_pim_ptr = provider->ReturnLut(8);
 
   int64_t dma_tx = 0;

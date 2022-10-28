@@ -27,7 +27,7 @@ class ConstantFolding : public GraphTransformer {
                   const std::unordered_set<std::string>& excluded_initializers = {}) noexcept;
 
  private:
-  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const override;
+  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const;
 
   const std::unordered_set<std::string> excluded_initializers_;
   const IExecutionProvider& execution_provider_;

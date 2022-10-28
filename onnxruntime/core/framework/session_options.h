@@ -104,6 +104,8 @@ struct SessionOptions {
   bool use_per_session_threads = true;
   bool thread_pool_allow_spinning = true;
 
+  // Node fusion flag for PIM provider
+  bool enable_fusion = false;
   // Deterministic compute is likely not as performant. This option is default to false.
   bool use_deterministic_compute = false;
 

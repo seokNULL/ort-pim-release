@@ -284,8 +284,8 @@ Status ProcessNode(
 
 }  // namespace
 
-Status MatMulScaleFusion::ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger)
-    const {
+Status MatMulScaleFusion::ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const
+     {
   GraphViewer graph_viewer{graph};
   const auto node_indices = graph_viewer.GetNodesInTopologicalOrder();
   for (const auto node_index : node_indices) {

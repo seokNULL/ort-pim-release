@@ -40,6 +40,7 @@
 #include "core/providers/cpu/controlflow/utils.h"
 #include "core/providers/cpu/cpu_execution_provider.h"
 #include "core/flatbuffers/flatbuffers_utils.h"
+#include "core/providers/pim/pim_graph_transformer.h"
 #ifdef USE_DML  // TODO: This is necessary for the workaround in TransformGraph
 #include "core/providers/dml/DmlExecutionProvider/src/GraphTransformer.h"
 #endif
@@ -210,6 +211,9 @@ void InferenceSession::ConstructorCommon(const SessionOptions& session_options,
 
   bool set_denormal_as_zero = session_options_.GetConfigOrDefault(kOrtSessionOptionsConfigSetDenormalAsZero, "0") == "1";
 
+#ifdef USE_PIM
+  use_fusion_node_ = session_options.enable_fusion;
+#endif
   // The only first session option for flush-to-zero and denormal-as-zero is effective to main thread and OpenMP threads.
   {
     static std::once_flag once;
@@ -805,6 +809,19 @@ common::Status InferenceSession::TransformGraph(onnxruntime::Graph& graph,
   // first apply global(execution provider independent),  level 1(default/system/basic) graph to graph optimizations
   ORT_RETURN_IF_ERROR_SESSIONID_(
       graph_transformer_mgr.ApplyTransformers(graph, TransformerLevel::Level1, *session_logger_));
+
+#ifdef USE_PIM
+  if (use_fusion_node_) {
+    printf("Enable node_fusion\n");
+    if (execution_providers_.Get(kPimExecutionProvider) && execution_providers_.NumProviders() <= 2) {
+      PIMGraphTransformer pim_transformer(onnxruntime::kPimExecutionProvider,
+                                            execution_providers_.Get(kPimExecutionProvider));
+
+      bool modified = false;
+      pim_transformer.Apply(graph, modified, *session_logger_);
+    }
+  }
+#endif
 
 #ifdef USE_DML
   // TODO: this is a temporary workaround to apply the DML EP's custom graph transformer prior to partitioning. This

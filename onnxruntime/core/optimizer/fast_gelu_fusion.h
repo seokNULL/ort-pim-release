@@ -29,7 +29,7 @@ class FastGeluFusion : public GraphTransformer {
   FastGeluFusion(const std::unordered_set<std::string>& compatible_execution_providers = {}) noexcept
       : GraphTransformer("FastGeluFusion", compatible_execution_providers) {}
 
-  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const override;
+  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const;
 
   MatchResult CheckFirstFormula(Graph& graph, Node& node, std::vector<std::reference_wrapper<Node>>& nodes_to_fuse) const;
 

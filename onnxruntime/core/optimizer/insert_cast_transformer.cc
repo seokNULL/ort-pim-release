@@ -109,7 +109,7 @@ class RemoveDuplicateCastTransformer : public GraphTransformer {
   }
 
  private:
-  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const override {
+  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const {
     std::map<const onnxruntime::NodeArg*, onnxruntime::NodeArg*> replacement_defs;
 
     auto output_args = graph.GetOutputs();

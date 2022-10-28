@@ -65,6 +65,10 @@ void ReadFile(const char * fname, Bfloat16* array, size_t length);
 bool FileExistanceCheck(const std::string& funct, std::vector<std::string>& check_tables);
 PathString MakeLutFileName(const std::string& funct);
 
+bool IsNodeSupportedByPim(
+    const onnxruntime::Node& node,
+    const onnxruntime::KernelRegistry& registry);
+    
  private:
   PIMExecutionProviderInfo info_;  
   AllocatorPtr allocator_;

@@ -124,7 +124,7 @@ Status Add<T>::Compute(OpKernelContext* ctx) const {
     auto begin_tensor_alloc = std::chrono::high_resolution_clock::now();
     Tensor* Y = ctx->Output(0, TensorShape({X, M, N}), true);
     long long tensor_alloc_dur = TimeDiffMicroSeconds(begin_tensor_alloc);
-    ctx->tensor_alloc_dur = tensor_alloc_dur;
+    ctx->tensor_alloc_dur += tensor_alloc_dur;
 
     Bfloat16* Y_PL_ptr = Y->MutableData<Bfloat16>();
     Y->SetIsPim();
@@ -456,6 +456,7 @@ Status Add<T>::Compute(OpKernelContext* ctx) const {
       auto begin_tensor_alloc = std::chrono::high_resolution_clock::now();
       Tensor* Y = ctx->Output(0, TensorShape({X, M, N}), true);
       long long tensor_alloc_dur = TimeDiffMicroSeconds(begin_tensor_alloc); 
+      ctx->tensor_alloc_dur += tensor_alloc_dur;
 
       Bfloat16* Y_PL_ptr = Y->MutableData<Bfloat16>();
       Y->SetIsPim();

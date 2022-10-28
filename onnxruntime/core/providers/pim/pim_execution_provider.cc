@@ -133,10 +133,10 @@ PIMExecutionProvider::GetCapability(const onnxruntime::GraphViewer& graph, const
       // std::vector<std::pair<int,int>> mul_vec = {};
       std::vector<std::pair<int,int>> mul_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
 
-       std::vector<std::pair<int,int>> sub_vec = {};
+      // std::vector<std::pair<int,int>> sub_vec = {};
       //std::vector<std::pair<int,int>> sub_vec = {{3,3}};
       // std::vector<std::pair<int,int>> sub_vec = {{3,1}, {1,3}, {3,0}};
-      // std::vector<std::pair<int,int>> sub_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
+      std::vector<std::pair<int,int>> sub_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
       // std::vector<std::pair<int,int>> sub_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
 
       // Operation information
@@ -222,6 +222,10 @@ PIMExecutionProvider::GetCapability(const onnxruntime::GraphViewer& graph, const
              not_supported = true;
            }
          }
+        
+       }
+        else if (op_name == "FusedMatMulAdd" || op_name == "FusedMatMulMul" || op_name == "FusedMatMulSub") {
+          // __TODO
        }
       #endif
 
@@ -292,6 +296,15 @@ class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOn
 class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 11, 12, float, Gemm);
 class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Gemm);
 
+class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMatMulAdd);
+class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMatMulMul);
+class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMatMulSub);
+class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 1, 8, float, FusedAddAdd);
+class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, 12,float, FusedAddAdd);
+class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, FusedAddAdd);
+class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedAddMul);
+class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMulAdd);
+class ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMulMul);
 
 //LUT operation extended: Tanh, Erf, Sqrt, Div, Pow, Relu, Sigmoid, Neg, Abs, Log
 class ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 6, 12, float, Tanh);
@@ -413,6 +426,17 @@ static Status RegisterPimKernels(KernelRegistry& kernel_registry) {
       // BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Div)>,
 
 
+      BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 1, 8, float, FusedAddAdd)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, 12, float, FusedAddAdd)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, FusedAddAdd)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedAddMul)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMulAdd)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMulMul)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMatMulAdd)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMatMulMul)>,
+      BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 9, float, FusedMatMulSub)>,    
+      // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 6, 12, float, Tanh)>,
+      // BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Tanh)>,
       // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 6, 12, float, Sigmoid)>,
       // BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, Sigmoid)>,
       // // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 6, 7, float, Sum)>,
@@ -422,6 +446,7 @@ static Status RegisterPimKernels(KernelRegistry& kernel_registry) {
       // // BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 11, 12, float, ArgMax)>, 
       // // BuildKernelCreateInfo<ONNX_OPERATOR_TYPED_KERNEL_CLASS_NAME(kPimExecutionProvider, kOnnxDomain, 13, float, ArgMax)>,                
   };
+
   for (auto& function_table_entry : function_table) {
     KernelCreateInfo info = function_table_entry();
     if (info.kernel_def != nullptr) {  // filter disabled entries where type is void
@@ -544,5 +569,124 @@ std::unique_ptr<onnxruntime::IDataTransfer> PIMExecutionProvider::GetDataTransfe
 
 
 
+// Almost a copy & paste from GetCapability()
+bool PIMExecutionProvider::IsNodeSupportedByPim(
+    const onnxruntime::Node& node,
+    const onnxruntime::KernelRegistry& registry) {
+  bool not_supported = false;
+  std::vector<NodeIndex> candidates;
+
+  const KernelCreateInfo* pim_kernel_def = nullptr;
+
+  auto st = GetKernelRegistry()->TryFindKernel(node, Type(), &pim_kernel_def);
+
+  // at least one registry has a PIM kernel for this node
+  // if (st.IsOK())
+  //   break;
+
+  // none of the provided registries has a CUDA kernel for this node
+  if (pim_kernel_def == nullptr) {
+    return false;
+  }
+
+  //////////////////////////////////////
+  //////// Supported Operation
+  /////////////////////////////////////
+
+  // std::vector<std::pair<int,int>> mm_vec = {};
+  std::vector<std::pair<int, int>> mm_vec = {{3, 2}};
+
+  // std::vector<std::pair<int,int>> add_vec = {};
+  std::vector<std::pair<int, int>> add_vec = {{3, 3}, {3, 1}, {1, 3}, {3, 0}};
+  // std::vector<std::pair<int,int>> mul_vec = {};
+  std::vector<std::pair<int, int>> mul_vec = {{3, 3}, {3, 1}, {1, 3}, {3, 0}};
+
+  //std::vector<std::pair<int, int>> sub_vec = {};
+  // std::vector<std::pair<int,int>> sub_vec = {{3,1}, {1,3}, {3,0}};
+  std::vector<std::pair<int,int>> sub_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
+  // std::vector<std::pair<int,int>> sub_vec = {{3,3}, {3,1}, {1,3}, {3,0}};
+
+  // Operation information
+  std::vector<std::tuple<int, int, int>> gemm_vec;
+  gemm_vec.push_back(std::make_tuple(2, 2, 1));
+
+#ifdef MANUAL
+  std::vector<std::string> node_list = {"Add_22"};
+  auto it = find(node_list.begin(), node_list.end(), node.Name());
+  if (it == node_list.end()) {
+      not_supported = true;
+    }
+
+#else
+    // std::string op_name = node.Name().substr(0, node.Name().find('_'));
+    std::string op_name(node.OpType());
+    // std::cout << "Node: " << node.Name() << " type: " << node.OpType() << std::endl;
+    // Case 1.
+    if (op_name == "MatMul" || op_name == "Add" || op_name == "Mul" || op_name == "Sub") {
+      // Shape information
+      std::vector<std::pair<std::string, int>> inputs = {{"mat_A", 0}, {"mat_B", 0}};
+
+      for (int i = 0; i < (int)node.InputArgCount().size(); i++) {
+        auto def = node.InputDefs().at(i);
+        auto shape = def->Shape();
+        if (shape == nullptr) {
+          return false;
+        }
+        auto input_dims = shape->dim_size();
+        inputs[i].second = input_dims;
+      }
+      std::pair<int, int> input_shape = std::make_pair(inputs[0].second, inputs[1].second);
+
+      if (op_name == "MatMul") {
+        auto mm_it = find(mm_vec.begin(), mm_vec.end(), input_shape);
+        if (mm_it == mm_vec.end()) {
+          return false;
+        }
+      } else if (op_name == "Add") {
+        auto add_it = find(add_vec.begin(), add_vec.end(), input_shape);
+        if (add_it == add_vec.end()) {
+          return false;
+        }
+      } else if (op_name == "Mul") {
+        auto mul_it = find(mul_vec.begin(), mul_vec.end(), input_shape);
+        if (mul_it == mul_vec.end()) {
+          return false;
+        }
+      } else if (op_name == "Sub") {
+        auto sub_it = find(sub_vec.begin(), sub_vec.end(), input_shape);
+        if (sub_it == sub_vec.end()) {
+          return false;
+        }
+      }
+    }
+    // Case 2.
+    //else if (op_name == "Gemm" || op_name == "FusedMatMulAdd" || op_name == "FusedMatMulMul" || op_name == "FusedMatMulSub") {
+    else if (op_name == "FusedMatMulAdd" || op_name == "FusedMatMulMul" || op_name == "FusedMatMulSub") {
+      // Shape information
+      std::vector<std::pair<std::string, int>> inputs = {{"mat_A", 0}, {"mat_B", 0}, {"mat_C", 0}};
+
+      for (int i = 0; i < (int)node.InputArgCount().size(); i++) {
+        auto def = node.InputDefs().at(i);
+        auto shape = def->Shape();
+        if (shape == nullptr) {
+          return false;
+        }
+        auto input_dims = shape->dim_size();
+        inputs[i].second = input_dims;
+      }
+      std::tuple<int, int, int> input_shape = std::make_tuple(inputs[0].second, inputs[1].second, inputs[2].second);
+
+      if (op_name == "Gemm") {
+        //auto gemm_it = find(gemm_vec.begin(), gemm_vec.end(), input_shape);
+        //if (gemm_it == gemm_vec.end()) {
+          return false;
+        //}
+      }
+    }
+    else
+      return false;
+#endif
+    return true;
+}
 
 }  // namespace onnxruntime

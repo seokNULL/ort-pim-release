@@ -61,6 +61,7 @@
 #include "test/providers/provider_test_utils.h"
 #include "test/test_environment.h"
 #include "test/util/include/default_providers.h"
+#include "core/providers/pim/pim_graph_transformer.h"
 
 using namespace std;
 using namespace ONNX_NAMESPACE;

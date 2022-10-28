@@ -1513,6 +1513,8 @@ void addObjectMethods(py::module& m, Environment& env) {
 Set this option to false if you don't want it. Default is True.)pbdoc")
       .def_readwrite("enable_profiling", &PySessionOptions::enable_profiling,
                      R"pbdoc(Enable profiling for this session. Default is false.)pbdoc")
+      .def_readwrite("enable_fusion", &PySessionOptions::enable_fusion,
+                     R"pbdoc(Enable node fusion for PIM provider. Default is false.)pbdoc")
       .def_readwrite("enable_partitioning", &PySessionOptions::enable_partitioning,
                      R"pbdoc(Enable partitioning for this session. Default is false.)pbdoc")          
       .def_readwrite("profile_file_prefix", &PySessionOptions::profile_file_prefix,

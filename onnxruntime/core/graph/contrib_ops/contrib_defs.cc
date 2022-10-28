@@ -165,6 +165,12 @@ using ONNX_NAMESPACE::AttributeProto;
 using ONNX_NAMESPACE::OpSchema;
 using ONNX_NAMESPACE::OPTIONAL_VALUE;
 
+void FusedEleShapeInference(ONNX_NAMESPACE::InferenceContext& ctx) {
+  propagateElemTypeFromInputToOutput(ctx, 0, 0);
+  auto& input_shape = getInputShape(ctx, 0);
+  updateOutputShape(ctx, 0, input_shape);  
+}
+
 void FusedMatMulShapeInference(ONNX_NAMESPACE::InferenceContext& ctx) {
   propagateElemTypeFromInputToOutput(ctx, 0, 0);
   auto transAAttr = ctx.getAttribute("transA");
@@ -2367,6 +2373,84 @@ It's an extension of Gelu. It takes the sum of input A and bias input B as the i
   }
   RegisterBertSchemas();
   RegisterQuantizationSchemas();
+
+#ifdef USE_PIM
+  ONNX_CONTRIB_OPERATOR_SCHEMA(FusedMatMulAdd)
+      .SetDomain(kOnnxDomain)
+      .SinceVersion(9)
+      .SetDoc("")
+      .Input(0, "MatA", "", "T")
+      .Input(1, "MatB", "", "T")
+      .Input(2, "Bias", "", "T")
+      .Output(0, "Y", "", "T")
+      .TypeConstraint(
+          "T",
+          {"tensor(float)", "tensor(bfloat16)"},
+          "Constrain input and output types to float/bfloat16 tensors.")
+      .TypeAndShapeInferenceFunction([](ONNX_NAMESPACE::InferenceContext &ctx) {
+          FusedMatMulShapeInference(ctx);
+      });
+  ONNX_CONTRIB_OPERATOR_SCHEMA(FusedAddAdd)
+      .SetDomain(kOnnxDomain)
+      .SinceVersion(9)
+      .SetDoc("")
+      .Input(0, "MatA", "", "T")
+      .Input(1, "MatB", "", "T")
+      .Input(2, "MatC", "", "T")
+      .Output(0, "Y", "", "T")
+      .TypeConstraint(
+          "T",
+          {"tensor(float)", "tensor(bfloat16)"},
+          "Constrain input and output types to float/bfloat16 tensors.")
+      .TypeAndShapeInferenceFunction([](ONNX_NAMESPACE::InferenceContext &ctx) {
+          FusedEleShapeInference(ctx);
+      });
+  ONNX_CONTRIB_OPERATOR_SCHEMA(FusedAddMul)
+      .SetDomain(kOnnxDomain)
+      .SinceVersion(9)
+      .SetDoc("")
+      .Input(0, "MatA", "", "T")
+      .Input(1, "MatB", "", "T")
+      .Input(2, "MatC", "", "T")
+      .Output(0, "Y", "", "T")
+      .TypeConstraint(
+          "T",
+          {"tensor(float)", "tensor(bfloat16)"},
+          "Constrain input and output types to float/bfloat16 tensors.")
+      .TypeAndShapeInferenceFunction([](ONNX_NAMESPACE::InferenceContext &ctx) {
+          FusedEleShapeInference(ctx);
+      });      
+  ONNX_CONTRIB_OPERATOR_SCHEMA(FusedMulAdd)
+      .SetDomain(kOnnxDomain)
+      .SinceVersion(9)
+      .SetDoc("")
+      .Input(0, "MatA", "", "T")
+      .Input(1, "MatB", "", "T")
+      .Input(2, "MatC", "", "T")
+      .Output(0, "Y", "", "T")
+      .TypeConstraint(
+          "T",
+          {"tensor(float)", "tensor(bfloat16)"},
+          "Constrain input and output types to float/bfloat16 tensors.")
+      .TypeAndShapeInferenceFunction([](ONNX_NAMESPACE::InferenceContext &ctx) {
+          FusedEleShapeInference(ctx);
+      });
+  ONNX_CONTRIB_OPERATOR_SCHEMA(FusedMulMul)
+      .SetDomain(kOnnxDomain)
+      .SinceVersion(9)
+      .SetDoc("")
+      .Input(0, "MatA", "", "T")
+      .Input(1, "MatB", "", "T")
+      .Input(2, "MatC", "", "T")
+      .Output(0, "Y", "", "T")
+      .TypeConstraint(
+          "T",
+          {"tensor(float)", "tensor(bfloat16)"},
+          "Constrain input and output types to float/bfloat16 tensors.")
+      .TypeAndShapeInferenceFunction([](ONNX_NAMESPACE::InferenceContext &ctx) {
+          FusedEleShapeInference(ctx);
+      });      
+#endif
 }
 }  // namespace contrib
 }  // namespace onnxruntime
