@@ -412,6 +412,10 @@ if(onnxruntime_USE_DML)
   list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_dml)
 endif()
 
+if(onnxruntime_USE_PIM)
+  list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_pim)
+endif()
+
 if(onnxruntime_USE_MIGRAPHX)
   list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_migraphx)
 endif()
@@ -455,6 +459,7 @@ set(ONNXRUNTIME_TEST_LIBS
     ${PROVIDERS_NNAPI}
     ${PROVIDERS_RKNPU}
     ${PROVIDERS_DML}
+    ${PROVIDERS_PIM}
     ${PROVIDERS_ACL}
     ${PROVIDERS_ARMNN}
     ${PROVIDERS_ROCM}
