@@ -166,6 +166,7 @@ tvm::runtime::PackedFunc NupharCompiler::GetLoweredPackedFunc(
     std::unordered_map<tvm::Tensor, tvm::Buffer> binds;
     tvm::Array<tvm::LoweredFunc> lowered = tvm::lower(tvm_schedule, tvm_args_, func_name, binds, config);
 
+
     if (settings.HasOption(codegen::CodeGenSettings::kCodeGenDumpLower)) {
       if (settings.OptionMatches(codegen::CodeGenSettings::kCodeGenDumpLower, "verbose") ||
           settings.OptionMatches(codegen::CodeGenSettings::kCodeGenDumpLower, subgraph_type)) {

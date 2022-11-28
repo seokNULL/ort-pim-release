@@ -204,7 +204,7 @@ static Status PartitionOnnxFormatModelImpl(Graph& graph, bool export_dll, FuncMa
   if (mode == GraphPartitioner::Mode::kPartition) {
     for (const auto &pynode_index : partition_map_[type]) {
       auto node = graph.GetNode(pynode_index);
-      // std::cout << node->Name() << std::endl;
+      std::cout << node->Name() << std::endl;
       partition_nodes.push_back(node);
     }
     graph_viewer.is_partitioned = true;

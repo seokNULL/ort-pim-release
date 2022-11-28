@@ -11,6 +11,7 @@
 #include <vector>
 #include <utility>
 #include <unordered_set>
+#include <cstdio>
 
 #include "ir_util.h"
 #include "arg_binder.h"
@@ -138,6 +139,10 @@ LoweredFunc MakeAPI(Stmt body,
   n->handle_data_type = binder.def_handle_dtype();
   n->is_packed_func = num_unpacked_args == 0;
   n->is_restricted = is_restricted;
+  
+  // printf("MakeAPI Start\n");
+  // LOG(INFO)<<body<<std::endl;
+
   body = AttrStmt::make(
       make_zero(Int(32)), attr::compute_scope,
       StringImm::make(name + "_compute_"), body);
@@ -156,6 +161,10 @@ LoweredFunc MakeAPI(Stmt body,
              device_type, device_id}, Call::Intrinsic)));
     body = Block::make(set_device, body);
   }
+
+  // printf("Before MergeNest\n");
+  // LOG(INFO)<<body<<std::endl;
+
   n->body = MergeNest(
       {seq_init, binder.init_nest(), seq_check, binder.asserts()}, body);
   LoweredFunc f(n);
@@ -168,6 +177,9 @@ LoweredFunc MakeAPI(Stmt body,
     os << " does not appeared in api_args";
     LOG(FATAL) << "Not all Vars are passed in api_args: " << os.str();
   }
+  
+  // printf("After MergeNest\n");
+  // LOG(INFO)<<body<<std::endl;
   return f;
 }
 

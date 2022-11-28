@@ -60,8 +60,8 @@ int main(void) {
   Verify(mod_dylib, "addone");
   // For libraries that are directly packed as system lib and linked together with the app
   // We can directly use GetSystemLib to get the system wide library.
-  LOG(INFO) << "Verify load function from system lib";
-  tvm::runtime::Module mod_syslib = (*tvm::runtime::Registry::Get("module._GetSystemLib"))();
-  Verify(mod_syslib, "addonesys");
+  // LOG(INFO) << "Verify load function from system lib";
+  // tvm::runtime::Module mod_syslib = (*tvm::runtime::Registry::Get("module._GetSystemLib"))();
+  // Verify(mod_syslib, "addonesys");
   return 0;
 }

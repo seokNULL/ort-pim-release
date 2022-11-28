@@ -47,9 +47,9 @@
 // #include "../../src/runtime/rpc/rpc_server_env.cc"
 
 // These macros enables the device API when uncommented.
-#define TVM_CUDA_RUNTIME 1
-#define TVM_METAL_RUNTIME 1
-#define TVM_OPENCL_RUNTIME 1
+//#define TVM_CUDA_RUNTIME 1
+//#define TVM_METAL_RUNTIME 1
+//#define TVM_OPENCL_RUNTIME 1
 
 // Uncomment the following lines to enable Metal
 // #include "../../src/runtime/metal/metal_device_api.mm"
